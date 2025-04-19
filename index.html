@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="app-header">
+            <h1>Cinematic Video Player</h1>
+            <div class="file-input-container">
+                <label for="video-input" class="select-video-btn">Select Video</label>
+                <input type="file" id="video-input" accept="video/*">
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="video-container">
+                <video id="video-player" controls></video>
+                <div id="no-video-message">Select a video to start watching</div>
+            </div>
+
+            <div class="recent-videos-container">
+                <div class="recent-header">
+                    <h2>Recent Videos</h2>
+                    <div class="recent-actions">
+                        <button id="clear-selected">Remove Selected</button>
+                        <button id="clear-all">Clear All</button>
+                    </div>
+                </div>
+                <div id="recent-videos-list" class="recent-videos-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
