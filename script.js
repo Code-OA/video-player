@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRecentVideos();
             return;
         }
-        
+
         recentVideos.forEach((video, index) => {
             const request = videoStore.get(video.id);
             
