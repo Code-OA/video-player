@@ -328,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Remove loading state
                     noVideoMessage.classList.remove('loading-video');
                     noVideoMessage.style.display = 'none';
+                    videoPlayer.volume = 0.2; // Set initial volume to 20%
                     
                     // Set playback position if available
                     if (videoPlaybackPositions[currentVideo.id]) {
@@ -425,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Remove loading state
                 noVideoMessage.classList.remove('loading-video');
                 noVideoMessage.style.display = 'none';
+                videoPlayer.volume = 0.2; // Set initial volume to 20%
                 
                 currentVideo.duration = videoPlayer.duration;
                 
