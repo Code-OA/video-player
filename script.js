@@ -1,4 +1,4 @@
-// Updated script.js with IndexedDB storage solution
+// Updated script.js with IndexedDB storage solution and volume persistence
 
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let recentVideos = [];
     const LOCAL_STORAGE_KEY = 'video-player-app-data';
     let db; // IndexedDB reference
+
+    // Set initial volume to a default of 20%. This will be overridden by saved settings if they exist.
+    videoPlayer.volume = 0.2;
 
     // Initialize the IndexedDB
     initIndexedDB();
@@ -61,6 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlaybackPositions = data.positions || {};
             recentVideos = data.recents || [];
             
+            // Load saved volume if it exists, otherwise it keeps the default 20%
+            if (typeof data.volume !== 'undefined') {
+                videoPlayer.volume = data.volume;
+            }
+            
             // Verify each video in recentVideos exists in IndexedDB
             if (db) {
                 verifyVideosInIndexedDB();
@@ -81,6 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const pendingChecks = recentVideos.length;
         let completedChecks = 0;
         let validVideos = [];
+        
+        if (pendingChecks === 0) {
+            renderRecentVideos();
+            return;
+        }
         
         recentVideos.forEach((video, index) => {
             const request = videoStore.get(video.id);
@@ -121,7 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveData() {
         const data = {
             positions: videoPlaybackPositions,
-            recents: recentVideos
+            recents: recentVideos,
+            volume: videoPlayer.volume // Save the current volume setting
         };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
     }
@@ -606,6 +620,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
+    // Save volume setting whenever it's changed by the user
+    videoPlayer.addEventListener('volumechange', saveData);
 
     videoPlayer.addEventListener('pause', updatePlaybackPosition);
     videoPlayer.addEventListener('ended', updatePlaybackPosition);
