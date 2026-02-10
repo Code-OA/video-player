@@ -21,32 +21,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initIndexedDB() {
         const request = indexedDB.open('VideoPlayerDB', 1);
-        
-        request.onerror = function(event) {
+
+        request.onerror = function (event) {
             console.error('IndexedDB error:', event.target.errorCode);
             // Fall back to localStorage only mode
             loadSavedData();
         };
-        
-        request.onupgradeneeded = function(event) {
+
+        request.onupgradeneeded = function (event) {
             const db = event.target.result;
-            
+
             // Create object stores
             if (!db.objectStoreNames.contains('videos')) {
                 const videoStore = db.createObjectStore('videos', { keyPath: 'id' });
                 videoStore.createIndex('lastPlayed', 'lastPlayed', { unique: false });
             }
         };
-        
-        request.onsuccess = function(event) {
+
+        request.onsuccess = function (event) {
             db = event.target.result;
             console.log('IndexedDB initialized successfully');
-            
+
             // Load saved metadata and then check for videos in IndexedDB
             loadSavedData();
-            
+
             // Database connection closed unexpectedly
-            db.onversionchange = function() {
+            db.onversionchange = function () {
                 db.close();
                 alert('Database is outdated, please reload the page.');
             };
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = JSON.parse(savedData);
             videoPlaybackPositions = data.positions || {};
             recentVideos = data.recents || [];
-            
+
             // Verify each video in recentVideos exists in IndexedDB
             if (db) {
                 verifyVideosInIndexedDB();
@@ -71,30 +71,30 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRecentVideos();
         }
     }
-    
+
     // Verify that each video in recentVideos exists in IndexedDB
     function verifyVideosInIndexedDB() {
         if (!db) return;
-        
+
         const transaction = db.transaction(['videos'], 'readonly');
         const videoStore = transaction.objectStore('videos');
         const pendingChecks = recentVideos.length;
         let completedChecks = 0;
         let validVideos = [];
-        
+
         recentVideos.forEach((video, index) => {
             const request = videoStore.get(video.id);
-            
-            request.onsuccess = function(event) {
+
+            request.onsuccess = function (event) {
                 completedChecks++;
-                
+
                 if (event.target.result) {
                     // Video exists in IndexedDB
                     validVideos.push(video);
                 } else {
                     console.log(`Video ${video.name} not found in IndexedDB, removing from recents`);
                 }
-                
+
                 // When all checks are done
                 if (completedChecks === pendingChecks) {
                     recentVideos = validVideos;
@@ -102,11 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderRecentVideos();
                 }
             };
-            
-            request.onerror = function() {
+
+            request.onerror = function () {
                 completedChecks++;
                 console.error(`Error checking video ${video.name} in IndexedDB`);
-                
+
                 // When all checks are done
                 if (completedChecks === pendingChecks) {
                     recentVideos = validVideos;
@@ -134,12 +134,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Format time (seconds) to MM:SS or HH:MM:SS
     function formatTime(seconds) {
         if (isNaN(seconds) || seconds === Infinity) return '00:00';
-        
+
         seconds = Math.floor(seconds);
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
-        
+
         if (hours > 0) {
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         } else {
@@ -152,30 +152,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Promise((resolve) => {
             const video = document.createElement('video');
             video.preload = 'metadata';
-            
-            video.onloadedmetadata = function() {
+
+            video.onloadedmetadata = function () {
                 video.currentTime = Math.min(1, video.duration / 4);
             };
-            
-            video.onseeked = function() {
+
+            video.onseeked = function () {
                 const canvas = document.createElement('canvas');
                 canvas.width = 320;
                 canvas.height = 180;
-                
+
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
+
                 const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
                 URL.revokeObjectURL(video.src);
                 resolve(thumbnail);
             };
-            
-            video.onerror = function() {
+
+            video.onerror = function () {
                 // In case of error, provide a default thumbnail
                 URL.revokeObjectURL(video.src);
                 resolve(null);
             };
-            
+
             video.src = URL.createObjectURL(videoFile);
         });
     }
@@ -192,23 +192,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 reject('IndexedDB not initialized');
                 return;
             }
-            
+
             // Check if video already exists
             const checkTransaction = db.transaction(['videos'], 'readonly');
             const checkStore = checkTransaction.objectStore('videos');
             const checkRequest = checkStore.get(videoId);
-            
-            checkRequest.onsuccess = function(event) {
+
+            checkRequest.onsuccess = function (event) {
                 if (event.target.result) {
                     // Video already exists, resolve immediately
                     resolve(true);
                     return;
                 }
-                
+
                 // Video doesn't exist, add it
                 const transaction = db.transaction(['videos'], 'readwrite');
                 const videoStore = transaction.objectStore('videos');
-                
+
                 const videoData = {
                     id: videoId,
                     file: file,
@@ -217,29 +217,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastModified: file.lastModified,
                     lastPlayed: new Date().toISOString()
                 };
-                
+
                 const request = videoStore.put(videoData);
-                
-                request.onsuccess = function() {
+
+                request.onsuccess = function () {
                     console.log(`Video ${file.name} stored in IndexedDB`);
                     resolve(true);
                 };
-                
-                request.onerror = function(event) {
+
+                request.onerror = function (event) {
                     console.error('Error storing video in IndexedDB:', event.target.error);
                     reject(event.target.error);
                 };
-                
-                transaction.oncomplete = function() {
+
+                transaction.oncomplete = function () {
                     console.log('Transaction completed');
                 };
-                
-                transaction.onerror = function(event) {
+
+                transaction.onerror = function (event) {
                     console.error('Transaction error:', event.target.error);
                 };
             };
-            
-            checkRequest.onerror = function(event) {
+
+            checkRequest.onerror = function (event) {
                 reject(event.target.error);
             };
         });
@@ -252,12 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 reject('IndexedDB not initialized');
                 return;
             }
-            
+
             const transaction = db.transaction(['videos'], 'readonly');
             const videoStore = transaction.objectStore('videos');
             const request = videoStore.get(videoId);
-            
-            request.onsuccess = function(event) {
+
+            request.onsuccess = function (event) {
                 const videoData = event.target.result;
                 if (videoData) {
                     resolve(videoData.file);
@@ -265,8 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     reject('Video not found in IndexedDB');
                 }
             };
-            
-            request.onerror = function(event) {
+
+            request.onerror = function (event) {
                 reject(event.target.error);
             };
         });
@@ -279,16 +279,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 reject('IndexedDB not initialized');
                 return;
             }
-            
+
             const transaction = db.transaction(['videos'], 'readwrite');
             const videoStore = transaction.objectStore('videos');
             const request = videoStore.delete(videoId);
-            
-            request.onsuccess = function() {
+
+            request.onsuccess = function () {
                 resolve(true);
             };
-            
-            request.onerror = function(event) {
+
+            request.onerror = function (event) {
                 reject(event.target.error);
             };
         });
@@ -301,35 +301,35 @@ document.addEventListener('DOMContentLoaded', () => {
             noVideoMessage.textContent = "Loading video...";
             noVideoMessage.classList.add('loading-video');
             videoPlayer.style.display = 'none';
-            
+
             // Get the video file from IndexedDB
             const videoFile = await getVideoFromIndexedDB(videoId);
-            
+
             // Find the video in recents
             const videoIndex = findVideoInRecents(videoId);
             if (videoIndex !== -1) {
                 currentVideo = recentVideos[videoIndex];
-                
+
                 // Move to the top of recents list if not already there
                 if (videoIndex > 0) {
                     recentVideos.splice(videoIndex, 1);
                     recentVideos.unshift(currentVideo);
                 }
-                
+
                 // Update last played timestamp
                 currentVideo.lastPlayed = new Date().toISOString();
-                
+
                 // Setup video playback
                 const videoObjectURL = URL.createObjectURL(videoFile);
                 videoPlayer.src = videoObjectURL;
                 videoPlayer.style.display = 'block';
-                
-                videoPlayer.onloadedmetadata = function() {
+
+                videoPlayer.onloadedmetadata = function () {
                     // Remove loading state
                     noVideoMessage.classList.remove('loading-video');
                     noVideoMessage.style.display = 'none';
                     videoPlayer.volume = 0.1; // Set initial volume to 20%
-                    
+
                     // Set playback position if available
                     if (videoPlaybackPositions[currentVideo.id]) {
                         const savedPosition = videoPlaybackPositions[currentVideo.id];
@@ -338,22 +338,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             videoPlayer.currentTime = savedPosition;
                         }
                     }
-                    
+
                     videoPlayer.play().catch(err => console.log('Auto-play prevented:', err));
                     saveData();
                     renderRecentVideos();
                 };
-                
-                videoPlayer.onerror = function() {
+
+                videoPlayer.onerror = function () {
                     noVideoMessage.textContent = "Error playing video";
                     noVideoMessage.classList.remove('loading-video');
                     noVideoMessage.style.display = 'flex';
                     videoPlayer.style.display = 'none';
                     URL.revokeObjectURL(videoPlayer.src);
                 };
-                
+
                 // Clean up object URL when video is done
-                videoPlayer.onended = function() {
+                videoPlayer.onended = function () {
                     updatePlaybackPosition();
                     // We don't revoke URL here as user might want to replay
                 };
@@ -373,30 +373,30 @@ document.addEventListener('DOMContentLoaded', () => {
         noVideoMessage.textContent = "Loading video...";
         noVideoMessage.classList.add('loading-video');
         videoPlayer.style.display = 'none';
-        
+
         const videoId = generateVideoId(file);
         const existingIndex = findVideoInRecents(videoId);
-        
+
         try {
             // Store the video in IndexedDB
             await storeVideoInIndexedDB(videoId, file);
-            
+
             // Check if this video already exists in recents
             if (existingIndex !== -1) {
                 currentVideo = recentVideos[existingIndex];
-                
+
                 // Move to the top of recents list
                 if (existingIndex > 0) {
                     recentVideos.splice(existingIndex, 1);
                     recentVideos.unshift(currentVideo);
                 }
-                
+
                 // Update last played timestamp
                 currentVideo.lastPlayed = new Date().toISOString();
             } else {
                 // Create new video entry
                 const thumbnail = await generateThumbnail(file);
-                
+
                 currentVideo = {
                     id: videoId,
                     name: file.name,
@@ -406,30 +406,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: 0,
                     lastPlayed: new Date().toISOString()
                 };
-                
+
                 // Add to the beginning of recents
                 recentVideos.unshift(currentVideo);
-                
+
                 // Limit recent videos to 20
                 if (recentVideos.length > 20) {
                     const removedVideo = recentVideos.pop();
                     // No need to delete from IndexedDB as we might want to keep them cached
                 }
             }
-            
+
             // Setup video playback
             const videoObjectURL = URL.createObjectURL(file);
             videoPlayer.src = videoObjectURL;
             videoPlayer.style.display = 'block';
-            
-            videoPlayer.onloadedmetadata = function() {
+
+            videoPlayer.onloadedmetadata = function () {
                 // Remove loading state
                 noVideoMessage.classList.remove('loading-video');
                 noVideoMessage.style.display = 'none';
-                videoPlayer.volume = 0.2; // Set initial volume to 20%
-                
+                videoPlayer.volume = 0.5; // Set initial volume to 20%
+
                 currentVideo.duration = videoPlayer.duration;
-                
+
                 // Set playback position if available
                 if (videoPlaybackPositions[currentVideo.id]) {
                     const savedPosition = videoPlaybackPositions[currentVideo.id];
@@ -438,37 +438,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         videoPlayer.currentTime = savedPosition;
                     }
                 }
-                
+
                 videoPlayer.play().catch(err => console.log('Auto-play prevented:', err));
                 saveData();
                 renderRecentVideos();
             };
-            
-            videoPlayer.onerror = function() {
+
+            videoPlayer.onerror = function () {
                 noVideoMessage.textContent = "Error loading video";
                 noVideoMessage.classList.remove('loading-video');
                 noVideoMessage.style.display = 'flex';
                 videoPlayer.style.display = 'none';
                 URL.revokeObjectURL(videoPlayer.src);
             };
-            
+
             // Clean up object URL when source changes
             const currentSrc = videoPlayer.src;
-            videoPlayer.addEventListener('emptied', function() {
+            videoPlayer.addEventListener('emptied', function () {
                 if (videoPlayer.src !== currentSrc) {
                     URL.revokeObjectURL(currentSrc);
                 }
             }, { once: true });
-            
+
         } catch (error) {
             console.error('Error storing video in IndexedDB:', error);
-            
+
             // If IndexedDB fails, fall back to direct playback without storing
             const videoObjectURL = URL.createObjectURL(file);
             videoPlayer.src = videoObjectURL;
             videoPlayer.style.display = 'block';
-            
-            videoPlayer.onloadedmetadata = function() {
+
+            videoPlayer.onloadedmetadata = function () {
                 noVideoMessage.classList.remove('loading-video');
                 noVideoMessage.style.display = 'none';
                 videoPlayer.play().catch(err => console.log('Auto-play prevented:', err));
@@ -479,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render the list of recent videos
     function renderRecentVideos() {
         recentVideosList.innerHTML = '';
-        
+
         if (recentVideos.length === 0) {
             const emptyMessage = document.createElement('div');
             emptyMessage.className = 'empty-recents-message';
@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recentVideosList.appendChild(emptyMessage);
             return;
         }
-        
+
         recentVideos.forEach(video => {
             const videoItem = document.createElement('div');
             videoItem.className = 'recent-video-item';
@@ -495,59 +495,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoItem.classList.add('selected');
             }
             videoItem.dataset.videoId = video.id;
-            
+
             // Thumbnail container
             const thumbnailContainer = document.createElement('div');
             thumbnailContainer.style.position = 'relative';
             thumbnailContainer.style.width = '140px';
-            
+
             // Thumbnail
             const thumbnail = document.createElement('img');
             thumbnail.className = 'video-thumbnail';
             thumbnail.src = video.thumbnail || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="79" viewBox="0 0 140 79"><rect width="140" height="79" fill="%23333"/><text x="70" y="40" font-family="Arial" font-size="12" fill="%23fff" text-anchor="middle" dominant-baseline="middle">No Preview</text></svg>';
             thumbnail.alt = video.name;
-            
+
             // Progress bar
             const progressBar = document.createElement('div');
             progressBar.className = 'video-progress-bar';
             const position = videoPlaybackPositions[video.id] || 0;
             const progressPercentage = video.duration ? Math.floor((position / video.duration) * 100) : 0;
             progressBar.style.width = `${progressPercentage}%`;
-            
+
             thumbnailContainer.appendChild(thumbnail);
             thumbnailContainer.appendChild(progressBar);
-            
+
             // Video details container
             const details = document.createElement('div');
             details.className = 'video-details';
-            
+
             // Video title
             const title = document.createElement('div');
             title.className = 'video-title';
             title.textContent = video.name;
-            
+
             // Video metadata
             const metadata = document.createElement('div');
             metadata.className = 'video-metadata';
-            
+
             const duration = document.createElement('span');
             duration.className = 'video-duration';
             duration.textContent = formatTime(video.duration);
-            
+
             const lastPosition = document.createElement('span');
             lastPosition.className = 'video-last-position';
             lastPosition.textContent = `${progressPercentage}% watched`;
-            
+
             // Timestamp
             const timestamp = document.createElement('div');
             timestamp.className = 'video-timestamp';
             const date = new Date(video.lastPlayed);
             timestamp.textContent = date.toLocaleString();
-            
+
             // Checkbox for selection
             const checkboxContainer = document.createElement('div');
             checkboxContainer.className = 'checkbox-container';
-            
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'video-checkbox';
@@ -555,28 +555,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation();
                 videoItem.classList.toggle('selected');
             });
-            
+
             // Append all elements
             metadata.appendChild(duration);
             metadata.appendChild(lastPosition);
-            
+
             details.appendChild(title);
             details.appendChild(metadata);
             details.appendChild(timestamp);
-            
+
             checkboxContainer.appendChild(checkbox);
-            
+
             videoItem.appendChild(thumbnailContainer);
             videoItem.appendChild(details);
             videoItem.appendChild(checkboxContainer);
-            
+
             // Click event to play this video directly from IndexedDB
             videoItem.addEventListener('click', (e) => {
                 if (e.target !== checkbox) {
                     playVideoFromIndexedDB(video.id);
                 }
             });
-            
+
             recentVideosList.appendChild(videoItem);
         });
     }
@@ -589,6 +589,46 @@ document.addEventListener('DOMContentLoaded', () => {
             saveData();
         }
     }
+
+    // Skip forward/backward functionality
+    const skipBackwardBtn = document.getElementById('skip-backward');
+    const skipForwardBtn = document.getElementById('skip-forward');
+
+    // Skip backward 10 seconds
+    skipBackwardBtn.addEventListener('click', () => {
+        if (videoPlayer.src && !videoPlayer.paused) {
+            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+            skipBackwardBtn.classList.add('animate');
+            setTimeout(() => skipBackwardBtn.classList.remove('animate'), 300);
+        }
+    });
+
+    // Skip forward 10 seconds
+    skipForwardBtn.addEventListener('click', () => {
+        if (videoPlayer.src && !videoPlayer.paused) {
+            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+            skipForwardBtn.classList.add('animate');
+            setTimeout(() => skipForwardBtn.classList.remove('animate'), 300);
+        }
+    });
+
+    // Keyboard shortcuts for skip (optional but recommended)
+    document.addEventListener('keydown', (e) => {
+        // Only work when video is focused or when not typing in input fields
+        if (document.activeElement.tagName === 'INPUT') return;
+
+        if (e.key === 'ArrowLeft' && videoPlayer.src) {
+            e.preventDefault();
+            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+            skipBackwardBtn.classList.add('animate');
+            setTimeout(() => skipBackwardBtn.classList.remove('animate'), 300);
+        } else if (e.key === 'ArrowRight' && videoPlayer.src) {
+            e.preventDefault();
+            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+            skipForwardBtn.classList.add('animate');
+            setTimeout(() => skipForwardBtn.classList.remove('animate'), 300);
+        }
+    });
 
     // Event Listeners
     videoInput.addEventListener('change', () => {
@@ -615,25 +655,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear selected videos
     clearSelectedBtn.addEventListener('click', async () => {
         const selectedItems = document.querySelectorAll('.recent-video-item.selected');
-        
+
         if (selectedItems.length === 0) return;
-        
+
         const deletePromises = [];
-        
+
         selectedItems.forEach(item => {
             const videoId = item.dataset.videoId;
             const index = findVideoInRecents(videoId);
-            
+
             if (index !== -1) {
                 // Remove from recents
                 recentVideos.splice(index, 1);
-                
+
                 // Remove playback position
                 delete videoPlaybackPositions[videoId];
-                
+
                 // Delete from IndexedDB (we'll keep this non-blocking)
                 deletePromises.push(deleteVideoFromIndexedDB(videoId));
-                
+
                 // If this is the current video, reset the player
                 if (currentVideo && currentVideo.id === videoId) {
                     currentVideo = null;
@@ -646,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        
+
         // Wait for all deletes to complete, but don't block the UI
         Promise.allSettled(deletePromises)
             .then(results => {
@@ -656,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             });
-        
+
         saveData();
         renderRecentVideos();
     });
@@ -664,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear all videos
     clearAllBtn.addEventListener('click', async () => {
         if (recentVideos.length === 0) return;
-        
+
         if (confirm('Are you sure you want to clear all recent videos?')) {
             try {
                 if (db) {
@@ -673,11 +713,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const videoStore = transaction.objectStore('videos');
                     videoStore.clear();
                 }
-                
+
                 recentVideos = [];
                 videoPlaybackPositions = {};
                 currentVideo = null;
-                
+
                 // Reset video player
                 if (videoPlayer.src) {
                     URL.revokeObjectURL(videoPlayer.src);
@@ -687,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 noVideoMessage.style.display = 'flex';
                 noVideoMessage.textContent = 'Select a video to start watching';
                 noVideoMessage.classList.remove('loading-video');
-                
+
                 saveData();
                 renderRecentVideos();
             } catch (error) {
@@ -708,9 +748,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const usedMB = Math.round(estimate.usage / (1024 * 1024));
                 const quotaMB = Math.round(estimate.quota / (1024 * 1024));
                 const percentUsed = Math.round((usedMB / quotaMB) * 100);
-                
+
                 console.log(`Storage: ${usedMB}MB used out of ${quotaMB}MB (${percentUsed}%)`);
-                
+
                 // If storage is almost full (>80%), warn the user
                 if (percentUsed > 80) {
                     console.warn('Storage is almost full. Consider clearing some videos.');
@@ -720,7 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    
+
     // Check storage usage periodically
     checkStorageUsage();
     setInterval(checkStorageUsage, 5 * 60 * 1000); // Check every 5 minutes
