@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <div class="app-header">
@@ -23,6 +25,25 @@
             <div class="video-container">
                 <video id="video-player" controls></video>
                 <div id="no-video-message">Select a video to start watching</div>
+
+                <!-- Add these skip controls -->
+                <div class="video-controls-overlay">
+                    <button class="skip-button skip-backward" id="skip-backward" title="Go back 10 seconds">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
+                        </svg>
+                        <span class="skip-text">10</span>
+                    </button>
+
+                    <button class="skip-button skip-forward" id="skip-forward" title="Go forward 10 seconds">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" />
+                        </svg>
+                        <span class="skip-text">10</span>
+                    </button>
+                </div>
             </div>
 
             <div class="recent-videos-container">
@@ -40,4 +61,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>
