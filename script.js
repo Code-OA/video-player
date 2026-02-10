@@ -781,8 +781,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'm':
                 e.preventDefault();
-                videoPlayer.volume = videoPlayer.volume > 0 ? 0 : 1;
-                volumeSlider.value = videoPlayer.volume * 100;
+                if (videoPlayer.volume > 0) {
+                    previousVolume = videoPlayer.volume;
+                    videoPlayer.volume = 0;
+                } else {
+                    videoPlayer.volume = previousVolume;
+                }
                 break;
         }
     });
