@@ -590,44 +590,201 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Skip forward/backward functionality
-    const skipBackwardBtn = document.getElementById('skip-backward');
+    // ============================================
+    // CUSTOM VIDEO PLAYER CONTROLS
+    // ============================================
+
+    const customControls = document.getElementById('custom-controls');
+    const playPauseBtn = document.getElementById('play-pause');
+    const skipBackBtn = document.getElementById('skip-back');
     const skipForwardBtn = document.getElementById('skip-forward');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const currentTimeDisplay = document.getElementById('current-time');
+    const durationDisplay = document.getElementById('duration');
+    const volumeBtn = document.getElementById('volume-btn');
+    const volumeSlider = document.getElementById('volume-slider');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const videoContainer = document.getElementById('video-container');
 
-    // Skip backward 10 seconds
-    skipBackwardBtn.addEventListener('click', () => {
-        if (videoPlayer.src && !videoPlayer.paused) {
-            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
-            skipBackwardBtn.classList.add('animate');
-            setTimeout(() => skipBackwardBtn.classList.remove('animate'), 300);
+    let controlsTimeout;
+
+    // Show controls temporarily
+    function showControls() {
+        customControls.classList.add('show');
+        clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+            if (!videoPlayer.paused) {
+                customControls.classList.remove('show');
+            }
+        }, 3000);
+    }
+
+    // Play/Pause Toggle
+    playPauseBtn.addEventListener('click', togglePlayPause);
+    videoPlayer.addEventListener('click', togglePlayPause);
+
+    function togglePlayPause() {
+        if (videoPlayer.paused || videoPlayer.ended) {
+            videoPlayer.play();
+            document.querySelector('.icon-play').style.display = 'none';
+            document.querySelector('.icon-pause').style.display = 'block';
+        } else {
+            videoPlayer.pause();
+            document.querySelector('.icon-play').style.display = 'block';
+            document.querySelector('.icon-pause').style.display = 'none';
         }
+    }
+
+    // Update play/pause icon on play/pause events
+    videoPlayer.addEventListener('play', () => {
+        document.querySelector('.icon-play').style.display = 'none';
+        document.querySelector('.icon-pause').style.display = 'block';
     });
 
-    // Skip forward 10 seconds
+    videoPlayer.addEventListener('pause', () => {
+        document.querySelector('.icon-play').style.display = 'block';
+        document.querySelector('.icon-pause').style.display = 'none';
+        customControls.classList.add('show');
+    });
+
+    // Skip Backward 10 seconds
+    skipBackBtn.addEventListener('click', () => {
+        videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+        showControls();
+    });
+
+    // Skip Forward 10 seconds
     skipForwardBtn.addEventListener('click', () => {
-        if (videoPlayer.src && !videoPlayer.paused) {
-            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
-            skipForwardBtn.classList.add('animate');
-            setTimeout(() => skipForwardBtn.classList.remove('animate'), 300);
+        videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+        showControls();
+    });
+
+    // Update Progress Bar
+    videoPlayer.addEventListener('timeupdate', () => {
+        const percent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+        progressBar.style.width = percent + '%';
+        currentTimeDisplay.textContent = formatTime(videoPlayer.currentTime);
+
+        if (!isNaN(videoPlayer.duration)) {
+            durationDisplay.textContent = formatTime(videoPlayer.duration);
         }
     });
 
-    // Keyboard shortcuts for skip (optional but recommended)
-    document.addEventListener('keydown', (e) => {
-        // Only work when video is focused or when not typing in input fields
-        if (document.activeElement.tagName === 'INPUT') return;
+    // Click on progress bar to seek
+    progressContainer.addEventListener('click', (e) => {
+        const rect = progressContainer.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        videoPlayer.currentTime = percent * videoPlayer.duration;
+        showControls();
+    });
 
-        if (e.key === 'ArrowLeft' && videoPlayer.src) {
-            e.preventDefault();
-            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
-            skipBackwardBtn.classList.add('animate');
-            setTimeout(() => skipBackwardBtn.classList.remove('animate'), 300);
-        } else if (e.key === 'ArrowRight' && videoPlayer.src) {
-            e.preventDefault();
-            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
-            skipForwardBtn.classList.add('animate');
-            setTimeout(() => skipForwardBtn.classList.remove('animate'), 300);
+    // Volume Control - Initialize volume on page load
+    volumeSlider.value = videoPlayer.volume * 100;
+
+    volumeSlider.addEventListener('input', (e) => {
+        videoPlayer.volume = e.target.value / 100;
+    });
+
+    // Sync volume slider when video volume changes
+    videoPlayer.addEventListener('volumechange', () => {
+        volumeSlider.value = videoPlayer.volume * 100;
+    });
+
+    volumeBtn.addEventListener('click', () => {
+        if (videoPlayer.volume > 0) {
+            videoPlayer.volume = 0;
+            volumeSlider.value = 0;
+        } else {
+            videoPlayer.volume = 1;
+            volumeSlider.value = 100;
         }
+    });
+
+    volumeBtn.addEventListener('click', () => {
+        if (videoPlayer.volume > 0) {
+            videoPlayer.volume = 0;
+            volumeSlider.value = 0;
+        } else {
+            videoPlayer.volume = 1;
+            volumeSlider.value = 100;
+        }
+    });
+
+    // Fullscreen Toggle
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
+            if (videoContainer.requestFullscreen) {
+                videoContainer.requestFullscreen();
+            } else if (videoContainer.webkitRequestFullscreen) {
+                videoContainer.webkitRequestFullscreen();
+            } else if (videoContainer.mozRequestFullScreen) {
+                videoContainer.mozRequestFullScreen();
+            }
+            document.querySelector('.icon-fullscreen').style.display = 'none';
+            document.querySelector('.icon-exit-fullscreen').style.display = 'block';
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            }
+            document.querySelector('.icon-fullscreen').style.display = 'block';
+            document.querySelector('.icon-exit-fullscreen').style.display = 'none';
+        }
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Don't trigger if typing in input fields
+        if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'file') return;
+
+        if (!videoPlayer.src) return;
+
+        switch (e.key.toLowerCase()) {
+            case ' ':
+            case 'k':
+                e.preventDefault();
+                togglePlayPause();
+                showControls();
+                break;
+            case 'arrowleft':
+            case 'j':
+                e.preventDefault();
+                videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+                showControls();
+                break;
+            case 'arrowright':
+            case 'l':
+                e.preventDefault();
+                videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+                showControls();
+                break;
+            case 'f':
+                e.preventDefault();
+                toggleFullscreen();
+                break;
+            case 'm':
+                e.preventDefault();
+                videoPlayer.volume = videoPlayer.volume > 0 ? 0 : 1;
+                volumeSlider.value = videoPlayer.volume * 100;
+                break;
+        }
+    });
+
+    // Show controls on mouse move
+    videoContainer.addEventListener('mousemove', showControls);
+    videoContainer.addEventListener('touchstart', showControls);
+
+    // Reset controls when video ends
+    videoPlayer.addEventListener('ended', () => {
+        customControls.classList.add('show');
+        document.querySelector('.icon-play').style.display = 'block';
+        document.querySelector('.icon-pause').style.display = 'none';
     });
 
     // Event Listeners
