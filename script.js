@@ -609,15 +609,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let controlsTimeout;
 
-    // Show controls temporarily
+    // Show controls temporarily (YouTube-like behavior)
     function showControls() {
         customControls.classList.add('show');
+        videoContainer.classList.remove('hide-cursor');
+
         clearTimeout(controlsTimeout);
-        controlsTimeout = setTimeout(() => {
-            if (!videoPlayer.paused) {
+        
+        // Only auto-hide if video is playing
+        if (!videoPlayer.paused && !videoPlayer.ended) {
+            controlsTimeout = setTimeout(() => {
                 customControls.classList.remove('show');
-            }
-        }, 3000);
+                videoContainer.classList.add('hide-cursor');
+            }, 3000);
+        }
+    }
+    
+    // Hide controls immediately
+    function hideControls() {
+        if (!videoPlayer.paused && !videoPlayer.ended) {
+            customControls.classList.remove('show');
+            videoContainer.classList.add('hide-cursor');
+        }
     }
 
     // Play/Pause Toggle
@@ -640,12 +653,15 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPlayer.addEventListener('play', () => {
         document.querySelector('.icon-play').style.display = 'none';
         document.querySelector('.icon-pause').style.display = 'block';
+        showControls(); // Start the auto-hide timer
     });
 
     videoPlayer.addEventListener('pause', () => {
         document.querySelector('.icon-play').style.display = 'block';
         document.querySelector('.icon-pause').style.display = 'none';
+        clearTimeout(controlsTimeout);
         customControls.classList.add('show');
+        videoContainer.classList.remove('hide-cursor');
     });
 
     // Skip Backward 10 seconds
@@ -791,13 +807,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Show controls on mouse move
+    // Show controls on mouse move (YouTube behavior)
     videoContainer.addEventListener('mousemove', showControls);
     videoContainer.addEventListener('touchstart', showControls);
 
+    // When mouse leaves, hide controls if playing
+    videoContainer.addEventListener('mouseleave', () => {
+        if (!videoPlayer.paused && !videoPlayer.ended) {
+            clearTimeout(controlsTimeout);
+            hideControls();
+        }
+    });
+
     // Reset controls when video ends
     videoPlayer.addEventListener('ended', () => {
+        clearTimeout(controlsTimeout);
         customControls.classList.add('show');
+        videoContainer.classList.remove('hide-cursor');
         document.querySelector('.icon-play').style.display = 'block';
         document.querySelector('.icon-pause').style.display = 'none';
     });

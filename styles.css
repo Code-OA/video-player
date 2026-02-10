@@ -492,6 +492,18 @@ video::-webkit-media-controls-volume-slider {
     cursor: pointer;
 }
 
+.video-container {
+    cursor: default;
+}
+
+.video-container.hide-cursor {
+    cursor: none !important;
+}
+
+.video-container.hide-cursor * {
+    cursor: none !important;
+}
+
 .custom-controls {
     position: absolute;
     bottom: 0;
@@ -502,11 +514,12 @@ video::-webkit-media-controls-volume-slider {
     opacity: 0;
     transition: opacity 0.3s ease;
     z-index: 100;
+    pointer-events: none;
 }
 
-.video-container:hover .custom-controls,
 .custom-controls.show {
     opacity: 1;
+    pointer-events: auto;
 }
 
 /* Progress Bar */
