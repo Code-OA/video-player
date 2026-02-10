@@ -20,9 +20,9 @@
     --danger: #ef4444;
     --warning: #f59e0b;
     --border-radius: 12px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-    --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
-    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
@@ -409,21 +409,23 @@ video::-webkit-media-controls-volume-slider {
         height: auto;
         gap: 20px;
     }
-    
+
     .video-container {
         height: 0;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        padding-bottom: 56.25%;
+        /* 16:9 aspect ratio */
         position: relative;
     }
-    
-    #video-player, #no-video-message {
+
+    #video-player,
+    #no-video-message {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
     }
-    
+
     .recent-videos-container {
         height: 400px;
     }
@@ -435,28 +437,28 @@ video::-webkit-media-controls-volume-slider {
         align-items: flex-start;
         gap: 15px;
     }
-    
+
     .file-input-container {
         width: 100%;
     }
-    
+
     .select-video-btn {
         width: 100%;
         justify-content: center;
     }
-    
+
     .recent-video-item {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .video-thumbnail {
         width: 100%;
         height: 120px;
         margin-right: 0;
         margin-bottom: 10px;
     }
-    
+
     .checkbox-container {
         top: 10px;
         right: 10px;
@@ -465,125 +467,298 @@ video::-webkit-media-controls-volume-slider {
 
 /* Loading animation for video */
 @keyframes pulse {
-    0% { opacity: 0.6; }
-    50% { opacity: 1; }
-    100% { opacity: 0.6; }
+    0% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
 }
 
 .loading-video {
     animation: pulse 1.5s infinite;
 }
 
-/* Skip Controls Overlay */
-.video-controls-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 60px;
-    pointer-events: none;
-    z-index: 10;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+/* ============================================
+   CUSTOM VIDEO PLAYER CONTROLS
+   ============================================ */
+
+#video-player {
+    cursor: pointer;
 }
 
-.video-container:hover .video-controls-overlay {
+.custom-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%);
+    padding: 15px 20px 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 100;
+}
+
+.video-container:hover .custom-controls,
+.custom-controls.show {
     opacity: 1;
 }
 
-.skip-button {
-    pointer-events: auto;
-    background-color: rgba(0, 0, 0, 0.7);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+/* Progress Bar */
+.progress-container {
+    width: 100%;
+    height: 5px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    position: relative;
+    transition: height 0.2s ease;
+}
+
+.progress-container:hover {
+    height: 7px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    border-radius: 10px;
+    width: 0%;
+    position: relative;
+    transition: width 0.1s linear;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background-color: white;
     border-radius: 50%;
-    width: 70px;
-    height: 70px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.progress-container:hover .progress-bar::after {
+    opacity: 1;
+}
+
+/* Controls Bottom */
+.controls-bottom {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.controls-left,
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Control Buttons */
+.control-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    color: white;
+    border-radius: 50%;
+    transition: all 0.2s ease;
     position: relative;
-    backdrop-filter: blur(5px);
+    width: 36px;
+    height: 36px;
 }
 
-.skip-button:hover {
-    background-color: rgba(58, 134, 255, 0.9);
-    border-color: var(--primary-color);
+.control-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
     transform: scale(1.1);
-    box-shadow: 0 0 20px rgba(58, 134, 255, 0.5);
 }
 
-.skip-button:active {
+.control-btn:active {
     transform: scale(0.95);
 }
 
-.skip-button svg {
-    width: 30px;
-    height: 30px;
-    margin-bottom: 2px;
+.control-btn svg {
+    width: 20px;
+    height: 20px;
 }
 
-.skip-text {
-    font-size: 12px;
-    font-weight: 700;
+#play-pause {
+    width: 42px;
+    height: 42px;
+}
+
+#play-pause svg {
+    width: 24px;
+    height: 24px;
+}
+
+#skip-back,
+#skip-forward {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+#skip-back svg,
+#skip-forward svg {
+    width: 28px;
+    height: 28px;
     position: absolute;
-    bottom: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
-/* Animation for skip feedback */
-@keyframes skipFeedback {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.2);
-        opacity: 0.8;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
+.skip-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    font-weight: bold;
+    color: white;
+    pointer-events: none;
+    z-index: 1;
 }
 
-.skip-button.animate {
-    animation: skipFeedback 0.3s ease;
+/* Time Display */
+.time-display {
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    margin-left: 8px;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
 }
 
-/* Responsive adjustments for skip buttons */
+/* Volume Controls */
+.volume-slider {
+    width: 0;
+    opacity: 0;
+    transition: all 0.3s ease;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    outline: none;
+}
+
+.controls-right:hover .volume-slider {
+    width: 70px;
+    opacity: 1;
+    margin: 0 8px;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
+/* Fullscreen Adjustments */
+.video-container:fullscreen .custom-controls,
+.video-container:-webkit-full-screen .custom-controls,
+.video-container:-moz-full-screen .custom-controls {
+    padding: 20px 30px 30px;
+}
+
+.video-container:fullscreen .control-btn,
+.video-container:-webkit-full-screen .control-btn,
+.video-container:-moz-full-screen .control-btn {
+    width: 44px;
+    height: 44px;
+}
+
+.video-container:fullscreen .control-btn svg,
+.video-container:-webkit-full-screen .control-btn svg,
+.video-container:-moz-full-screen .control-btn svg {
+    width: 26px;
+    height: 26px;
+}
+
+/* Mobile Responsive */
 @media (max-width: 768px) {
-    .video-controls-overlay {
-        padding: 0 20px;
+    .custom-controls {
+        padding: 10px 15px 15px;
+    }
+
+    .controls-left,
+    .controls-right {
+        gap: 4px;
+    }
+
+    .control-btn {
+        width: 32px;
+        height: 32px;
+        padding: 6px;
+    }
+
+    .control-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    #play-pause {
+        width: 38px;
+        height: 38px;
+    }
+
+    .time-display {
+        font-size: 11px;
+        margin-left: 4px;
+    }
+
+    .volume-slider {
+        display: none;
+    }
+
+    #skip-back,
+    #skip-forward {
+        width: 36px;
+        height: 36px;
     }
     
-    .skip-button {
-        width: 55px;
-        height: 55px;
-    }
-    
-    .skip-button svg {
+    #skip-back svg,
+    #skip-forward svg {
         width: 24px;
         height: 24px;
     }
     
-    .skip-text {
+    .skip-value {
         font-size: 10px;
-        bottom: 12px;
     }
 }
 
-/* Show controls overlay when video is playing */
-.video-container.playing .video-controls-overlay {
-    opacity: 0;
-}
-
-.video-container.playing:hover .video-controls-overlay {
-    opacity: 1;
+/* Loading/Buffering State */
+.video-container.loading .custom-controls {
+    pointer-events: none;
+    opacity: 0.5;
 }
