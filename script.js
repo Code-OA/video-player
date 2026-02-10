@@ -1,4 +1,4 @@
-// Updated script.js with IndexedDB storage solution
+// Optimized script.js - Clean, consistent, and bug-free
 
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let videoPlaybackPositions = {};
     let recentVideos = [];
     const LOCAL_STORAGE_KEY = 'video-player-app-data';
+    const INITIAL_VOLUME = 0.1; // Consistent initial volume
     let db; // IndexedDB reference
 
     // Initialize the IndexedDB
@@ -24,14 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         request.onerror = function (event) {
             console.error('IndexedDB error:', event.target.errorCode);
-            // Fall back to localStorage only mode
             loadSavedData();
         };
 
         request.onupgradeneeded = function (event) {
             const db = event.target.result;
 
-            // Create object stores
             if (!db.objectStoreNames.contains('videos')) {
                 const videoStore = db.createObjectStore('videos', { keyPath: 'id' });
                 videoStore.createIndex('lastPlayed', 'lastPlayed', { unique: false });
@@ -42,10 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
             db = event.target.result;
             console.log('IndexedDB initialized successfully');
 
-            // Load saved metadata and then check for videos in IndexedDB
             loadSavedData();
 
-            // Database connection closed unexpectedly
             db.onversionchange = function () {
                 db.close();
                 alert('Database is outdated, please reload the page.');
@@ -61,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlaybackPositions = data.positions || {};
             recentVideos = data.recents || [];
 
-            // Verify each video in recentVideos exists in IndexedDB
             if (db) {
                 verifyVideosInIndexedDB();
             } else {
@@ -74,7 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Verify that each video in recentVideos exists in IndexedDB
     function verifyVideosInIndexedDB() {
-        if (!db) return;
+        if (!db || recentVideos.length === 0) {
+            renderRecentVideos();
+            return;
+        }
 
         const transaction = db.transaction(['videos'], 'readonly');
         const videoStore = transaction.objectStore('videos');
@@ -82,20 +81,18 @@ document.addEventListener('DOMContentLoaded', () => {
         let completedChecks = 0;
         let validVideos = [];
 
-        recentVideos.forEach((video, index) => {
+        recentVideos.forEach((video) => {
             const request = videoStore.get(video.id);
 
             request.onsuccess = function (event) {
                 completedChecks++;
 
                 if (event.target.result) {
-                    // Video exists in IndexedDB
                     validVideos.push(video);
                 } else {
                     console.log(`Video ${video.name} not found in IndexedDB, removing from recents`);
                 }
 
-                // When all checks are done
                 if (completedChecks === pendingChecks) {
                     recentVideos = validVideos;
                     saveData();
@@ -107,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 completedChecks++;
                 console.error(`Error checking video ${video.name} in IndexedDB`);
 
-                // When all checks are done
                 if (completedChecks === pendingChecks) {
                     recentVideos = validVideos;
                     saveData();
@@ -133,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Format time (seconds) to MM:SS or HH:MM:SS
     function formatTime(seconds) {
-        if (isNaN(seconds) || seconds === Infinity) return '00:00';
+        if (isNaN(seconds) || seconds === Infinity) return '0:00';
 
         seconds = Math.floor(seconds);
         const hours = Math.floor(seconds / 3600);
@@ -141,9 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const secs = seconds % 60;
 
         if (hours > 0) {
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         } else {
-            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
     }
 
@@ -171,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             video.onerror = function () {
-                // In case of error, provide a default thumbnail
                 URL.revokeObjectURL(video.src);
                 resolve(null);
             };
@@ -193,19 +188,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Check if video already exists
             const checkTransaction = db.transaction(['videos'], 'readonly');
             const checkStore = checkTransaction.objectStore('videos');
             const checkRequest = checkStore.get(videoId);
 
             checkRequest.onsuccess = function (event) {
                 if (event.target.result) {
-                    // Video already exists, resolve immediately
                     resolve(true);
                     return;
                 }
 
-                // Video doesn't exist, add it
                 const transaction = db.transaction(['videos'], 'readwrite');
                 const videoStore = transaction.objectStore('videos');
 
@@ -228,14 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 request.onerror = function (event) {
                     console.error('Error storing video in IndexedDB:', event.target.error);
                     reject(event.target.error);
-                };
-
-                transaction.oncomplete = function () {
-                    console.log('Transaction completed');
-                };
-
-                transaction.onerror = function (event) {
-                    console.error('Transaction error:', event.target.error);
                 };
             };
 
@@ -294,9 +278,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Clean up previous video
+    function cleanupPreviousVideo() {
+        if (videoPlayer.src && videoPlayer.src.startsWith('blob:')) {
+            URL.revokeObjectURL(videoPlayer.src);
+        }
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+    }
+
     // Load a video from IndexedDB and play it
     async function playVideoFromIndexedDB(videoId, isAutoplayTriggered = false) {
         try {
+            // Clean up previous video
+            cleanupPreviousVideo();
+
             // Show loading state
             noVideoMessage.textContent = "Loading video...";
             noVideoMessage.classList.add('loading-video');
@@ -312,13 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Only move to top and update timestamp if NOT triggered by autoplay
                 if (!isAutoplayTriggered) {
-                    // Move to the top of recents list if not already there
                     if (videoIndex > 0) {
                         recentVideos.splice(videoIndex, 1);
                         recentVideos.unshift(currentVideo);
                     }
 
-                    // Update last played timestamp
                     currentVideo.lastPlayed = new Date().toISOString();
                     saveData();
                     renderRecentVideos();
@@ -330,15 +324,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoPlayer.style.display = 'block';
 
                 videoPlayer.onloadedmetadata = function () {
-                    // Remove loading state
                     noVideoMessage.classList.remove('loading-video');
                     noVideoMessage.style.display = 'none';
-                    videoPlayer.volume = 0.1; // Set initial volume to 20%
+                    
+                    // Set consistent initial volume
+                    videoPlayer.volume = INITIAL_VOLUME;
+                    
+                    // Apply loop state
+                    videoPlayer.loop = isLoopEnabled;
 
                     // Set playback position if available
                     if (videoPlaybackPositions[currentVideo.id]) {
                         const savedPosition = videoPlaybackPositions[currentVideo.id];
-                        // Only restore position if it's not at the end of the video
                         if (savedPosition < videoPlayer.duration - 5) {
                             videoPlayer.currentTime = savedPosition;
                         }
@@ -354,12 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     videoPlayer.style.display = 'none';
                     URL.revokeObjectURL(videoPlayer.src);
                 };
-
-                // Clean up object URL when video is done
-                videoPlayer.onended = function () {
-                    updatePlaybackPosition();
-                    // We don't revoke URL here as user might want to replay
-                };
             }
         } catch (error) {
             console.error('Error playing video from IndexedDB:', error);
@@ -372,6 +363,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load a video when selected from file input
     async function loadVideo(file) {
+        // Clean up previous video
+        cleanupPreviousVideo();
+
         // Show loading state
         noVideoMessage.textContent = "Loading video...";
         noVideoMessage.classList.add('loading-video');
@@ -388,13 +382,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (existingIndex !== -1) {
                 currentVideo = recentVideos[existingIndex];
 
-                // Move to the top of recents list
                 if (existingIndex > 0) {
                     recentVideos.splice(existingIndex, 1);
                     recentVideos.unshift(currentVideo);
                 }
 
-                // Update last played timestamp
                 currentVideo.lastPlayed = new Date().toISOString();
             } else {
                 // Create new video entry
@@ -410,13 +402,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastPlayed: new Date().toISOString()
                 };
 
-                // Add to the beginning of recents
                 recentVideos.unshift(currentVideo);
 
                 // Limit recent videos to 20
                 if (recentVideos.length > 20) {
-                    const removedVideo = recentVideos.pop();
-                    // No need to delete from IndexedDB as we might want to keep them cached
+                    recentVideos.pop();
                 }
             }
 
@@ -426,17 +416,20 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlayer.style.display = 'block';
 
             videoPlayer.onloadedmetadata = function () {
-                // Remove loading state
                 noVideoMessage.classList.remove('loading-video');
                 noVideoMessage.style.display = 'none';
-                videoPlayer.volume = 0.5; // Set initial volume to 20%
+                
+                // Set consistent initial volume
+                videoPlayer.volume = INITIAL_VOLUME;
+                
+                // Apply loop state
+                videoPlayer.loop = isLoopEnabled;
 
                 currentVideo.duration = videoPlayer.duration;
 
                 // Set playback position if available
                 if (videoPlaybackPositions[currentVideo.id]) {
                     const savedPosition = videoPlaybackPositions[currentVideo.id];
-                    // Only restore position if it's not at the end of the video
                     if (savedPosition < videoPlayer.duration - 5) {
                         videoPlayer.currentTime = savedPosition;
                     }
@@ -455,18 +448,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 URL.revokeObjectURL(videoPlayer.src);
             };
 
-            // Clean up object URL when source changes
-            const currentSrc = videoPlayer.src;
-            videoPlayer.addEventListener('emptied', function () {
-                if (videoPlayer.src !== currentSrc) {
-                    URL.revokeObjectURL(currentSrc);
-                }
-            }, { once: true });
-
         } catch (error) {
             console.error('Error storing video in IndexedDB:', error);
 
-            // If IndexedDB fails, fall back to direct playback without storing
+            // If IndexedDB fails, fall back to direct playback
             const videoObjectURL = URL.createObjectURL(file);
             videoPlayer.src = videoObjectURL;
             videoPlayer.style.display = 'block';
@@ -474,6 +459,8 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlayer.onloadedmetadata = function () {
                 noVideoMessage.classList.remove('loading-video');
                 noVideoMessage.style.display = 'none';
+                videoPlayer.volume = INITIAL_VOLUME;
+                videoPlayer.loop = isLoopEnabled;
                 videoPlayer.play().catch(err => console.log('Auto-play prevented:', err));
             };
         }
@@ -494,8 +481,10 @@ document.addEventListener('DOMContentLoaded', () => {
         recentVideos.forEach(video => {
             const videoItem = document.createElement('div');
             videoItem.className = 'recent-video-item';
+            
+            // Use separate class for currently playing video
             if (currentVideo && video.id === currentVideo.id) {
-                videoItem.classList.add('selected');
+                videoItem.classList.add('current-playing');
             }
             videoItem.dataset.videoId = video.id;
 
@@ -503,6 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const thumbnailContainer = document.createElement('div');
             thumbnailContainer.style.position = 'relative';
             thumbnailContainer.style.width = '140px';
+            thumbnailContainer.style.flexShrink = '0';
 
             // Thumbnail
             const thumbnail = document.createElement('img');
@@ -556,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
             checkbox.className = 'video-checkbox';
             checkbox.addEventListener('click', (e) => {
                 e.stopPropagation();
-                videoItem.classList.toggle('selected');
+                // Checkbox manages its own state
             });
 
             // Append all elements
@@ -573,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoItem.appendChild(details);
             videoItem.appendChild(checkboxContainer);
 
-            // Click event to play this video directly from IndexedDB
+            // Click event to play this video
             videoItem.addEventListener('click', (e) => {
                 if (e.target !== checkbox) {
                     playVideoFromIndexedDB(video.id);
@@ -617,6 +607,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAutoplayEnabled = false;
 
     let controlsTimeout;
+    let previousVolume = INITIAL_VOLUME; // Store previous volume before muting
+
+    // Initialize volume slider to match INITIAL_VOLUME
+    volumeSlider.value = INITIAL_VOLUME * 100;
 
     // Show controls temporarily (YouTube-like behavior)
     function showControls() {
@@ -625,7 +619,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clearTimeout(controlsTimeout);
         
-        // Only auto-hide if video is playing
         if (!videoPlayer.paused && !videoPlayer.ended) {
             controlsTimeout = setTimeout(() => {
                 customControls.classList.remove('show');
@@ -644,17 +637,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Play/Pause Toggle
     playPauseBtn.addEventListener('click', togglePlayPause);
-    videoPlayer.addEventListener('click', togglePlayPause);
+    
+    // Click on video container to toggle play/pause
+    videoContainer.addEventListener('click', (e) => {
+        if (e.target === videoPlayer || e.target === videoContainer) {
+            togglePlayPause();
+        }
+    });
 
     function togglePlayPause() {
         if (videoPlayer.paused || videoPlayer.ended) {
             videoPlayer.play();
-            document.querySelector('.icon-play').style.display = 'none';
-            document.querySelector('.icon-pause').style.display = 'block';
         } else {
             videoPlayer.pause();
-            document.querySelector('.icon-play').style.display = 'block';
-            document.querySelector('.icon-pause').style.display = 'none';
         }
     }
 
@@ -662,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPlayer.addEventListener('play', () => {
         document.querySelector('.icon-play').style.display = 'none';
         document.querySelector('.icon-pause').style.display = 'block';
-        showControls(); // Start the auto-hide timer
+        showControls();
     });
 
     videoPlayer.addEventListener('pause', () => {
@@ -704,21 +699,13 @@ document.addEventListener('DOMContentLoaded', () => {
         showControls();
     });
 
-    // Volume Control - Initialize volume on page load
-    let previousVolume = 1; // Store previous volume before muting
-    volumeSlider.value = videoPlayer.volume * 100;
-
+    // Volume Control
     volumeSlider.addEventListener('input', (e) => {
         const newVolume = e.target.value / 100;
         videoPlayer.volume = newVolume;
         if (newVolume > 0) {
-            previousVolume = newVolume; // Save volume when manually adjusting
+            previousVolume = newVolume;
         }
-    });
-
-    // Sync volume slider when video volume changes and update icon
-    videoPlayer.addEventListener('volumechange', () => {
-        volumeSlider.value = videoPlayer.volume * 100;
         updateVolumeIcon();
     });
 
@@ -735,12 +722,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Sync volume slider when video volume changes
+    videoPlayer.addEventListener('volumechange', () => {
+        volumeSlider.value = videoPlayer.volume * 100;
+        updateVolumeIcon();
+    });
+
     volumeBtn.addEventListener('click', () => {
         if (videoPlayer.volume > 0) {
-            previousVolume = videoPlayer.volume; // Save current volume
+            previousVolume = videoPlayer.volume;
             videoPlayer.volume = 0;
         } else {
-            videoPlayer.volume = previousVolume; // Restore previous volume
+            videoPlayer.volume = previousVolume;
         }
     });
 
@@ -785,10 +778,9 @@ document.addEventListener('DOMContentLoaded', () => {
             loopBtn.querySelector('.icon-loop-on').style.display = 'block';
             loopBtn.title = 'Loop enabled - Click to disable';
             
-            // If autoplay is enabled, disable it (loop takes priority)
+            // If autoplay is enabled, disable it
             if (isAutoplayEnabled) {
                 isAutoplayEnabled = false;
-                videoPlayer.loop = true; // Ensure loop is set
                 autoplayBtn.classList.remove('active');
                 autoplayBtn.querySelector('.icon-autoplay-off').style.display = 'block';
                 autoplayBtn.querySelector('.icon-autoplay-on').style.display = 'none';
@@ -813,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             autoplayBtn.querySelector('.icon-autoplay-on').style.display = 'block';
             autoplayBtn.title = 'Autoplay enabled - Click to disable';
             
-            // If loop is enabled, disable it (autoplay takes priority)
+            // If loop is enabled, disable it
             if (isLoopEnabled) {
                 isLoopEnabled = false;
                 videoPlayer.loop = false;
@@ -843,14 +835,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextIndex = (currentIndex + 1) % recentVideos.length;
         const nextVideo = recentVideos[nextIndex];
         
-        // Play the next video with autoplay flag set to true
+        // Play the next video with autoplay flag
         playVideoFromIndexedDB(nextVideo.id, true);
     }
 
     // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
         // Don't trigger if typing in input fields
-        if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'file') return;
+        if (document.activeElement.tagName === 'INPUT') return;
 
         if (!videoPlayer.src) return;
 
@@ -889,11 +881,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Show controls on mouse move (YouTube behavior)
+    // Show controls on mouse move
     videoContainer.addEventListener('mousemove', showControls);
     videoContainer.addEventListener('touchstart', showControls);
 
-    // When mouse leaves, hide controls if playing
+    // Hide controls when mouse leaves
     videoContainer.addEventListener('mouseleave', () => {
         if (!videoPlayer.paused && !videoPlayer.ended) {
             clearTimeout(controlsTimeout);
@@ -901,7 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Reset controls when video ends
+    // Handle video end
     videoPlayer.addEventListener('ended', () => {
         clearTimeout(controlsTimeout);
         customControls.classList.add('show');
@@ -909,16 +901,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Handle based on loop/autoplay settings
         if (isLoopEnabled) {
-            // Loop is already handled by videoPlayer.loop = true
-            // Just ensure play/pause icons are correct
+            // Loop is handled by videoPlayer.loop
             return;
         }
         
         if (isAutoplayEnabled) {
-            // Play next video in recent videos list
             playNextVideo();
         } else {
-            // Default behavior: show controls and reset play button
             document.querySelector('.icon-play').style.display = 'block';
             document.querySelector('.icon-pause').style.display = 'none';
         }
@@ -932,13 +921,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Update playback position periodically and when video is paused
+    // Update playback position periodically
     videoPlayer.addEventListener('timeupdate', () => {
         if (currentVideo && videoPlayer.currentTime > 0) {
-            // Update position every 5 seconds to avoid excessive storage writes
+            // Update every 5 seconds
             if (Math.floor(videoPlayer.currentTime) % 5 === 0) {
                 updatePlaybackPosition();
-                renderRecentVideos(); // Update the UI to show current position
+                renderRecentVideos();
             }
         }
     });
@@ -948,30 +937,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Clear selected videos
     clearSelectedBtn.addEventListener('click', async () => {
-        const selectedItems = document.querySelectorAll('.recent-video-item.selected');
+        const checkedBoxes = document.querySelectorAll('.video-checkbox:checked');
 
-        if (selectedItems.length === 0) return;
+        if (checkedBoxes.length === 0) return;
 
         const deletePromises = [];
 
-        selectedItems.forEach(item => {
-            const videoId = item.dataset.videoId;
+        checkedBoxes.forEach(checkbox => {
+            const videoItem = checkbox.closest('.recent-video-item');
+            const videoId = videoItem.dataset.videoId;
             const index = findVideoInRecents(videoId);
 
             if (index !== -1) {
-                // Remove from recents
                 recentVideos.splice(index, 1);
-
-                // Remove playback position
                 delete videoPlaybackPositions[videoId];
-
-                // Delete from IndexedDB (we'll keep this non-blocking)
                 deletePromises.push(deleteVideoFromIndexedDB(videoId));
 
                 // If this is the current video, reset the player
                 if (currentVideo && currentVideo.id === videoId) {
+                    cleanupPreviousVideo();
                     currentVideo = null;
-                    URL.revokeObjectURL(videoPlayer.src);
                     videoPlayer.src = '';
                     videoPlayer.style.display = 'none';
                     noVideoMessage.style.display = 'flex';
@@ -981,7 +966,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Wait for all deletes to complete, but don't block the UI
         Promise.allSettled(deletePromises)
             .then(results => {
                 results.forEach(result => {
@@ -1002,7 +986,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirm('Are you sure you want to clear all recent videos?')) {
             try {
                 if (db) {
-                    // Clear all videos from IndexedDB
                     const transaction = db.transaction(['videos'], 'readwrite');
                     const videoStore = transaction.objectStore('videos');
                     videoStore.clear();
@@ -1010,12 +993,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 recentVideos = [];
                 videoPlaybackPositions = {};
+                
+                cleanupPreviousVideo();
                 currentVideo = null;
 
-                // Reset video player
-                if (videoPlayer.src) {
-                    URL.revokeObjectURL(videoPlayer.src);
-                }
                 videoPlayer.src = '';
                 videoPlayer.style.display = 'none';
                 noVideoMessage.style.display = 'flex';
@@ -1031,10 +1012,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Before unloading the page, save the current playback position
+    // Save position before page unload
     window.addEventListener('beforeunload', updatePlaybackPosition);
 
-    // Calculate and monitor storage usage
+    // Monitor storage usage
     async function checkStorageUsage() {
         if (navigator.storage && navigator.storage.estimate) {
             try {
@@ -1045,7 +1026,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 console.log(`Storage: ${usedMB}MB used out of ${quotaMB}MB (${percentUsed}%)`);
 
-                // If storage is almost full (>80%), warn the user
                 if (percentUsed > 80) {
                     console.warn('Storage is almost full. Consider clearing some videos.');
                 }
@@ -1055,7 +1035,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Check storage usage periodically
     checkStorageUsage();
-    setInterval(checkStorageUsage, 5 * 60 * 1000); // Check every 5 minutes
+    setInterval(checkStorageUsage, 5 * 60 * 1000);
 });
