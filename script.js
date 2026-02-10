@@ -606,6 +606,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeSlider = document.getElementById('volume-slider');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     const videoContainer = document.getElementById('video-container');
+    const loopBtn = document.getElementById('loop-btn');
+    const autoplayBtn = document.getElementById('autoplay-btn');
+
+    // Session-based settings (reset on page refresh)
+    let isLoopEnabled = false;
+    let isAutoplayEnabled = false;
 
     let controlsTimeout;
 
@@ -765,6 +771,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Loop Toggle Button
+    loopBtn.addEventListener('click', () => {
+        isLoopEnabled = !isLoopEnabled;
+        videoPlayer.loop = isLoopEnabled;
+        
+        if (isLoopEnabled) {
+            loopBtn.classList.add('active');
+            loopBtn.querySelector('.icon-loop-off').style.display = 'none';
+            loopBtn.querySelector('.icon-loop-on').style.display = 'block';
+            loopBtn.title = 'Loop enabled - Click to disable';
+            
+            // If autoplay is enabled, disable it (loop takes priority)
+            if (isAutoplayEnabled) {
+                isAutoplayEnabled = false;
+                videoPlayer.loop = true; // Ensure loop is set
+                autoplayBtn.classList.remove('active');
+                autoplayBtn.querySelector('.icon-autoplay-off').style.display = 'block';
+                autoplayBtn.querySelector('.icon-autoplay-on').style.display = 'none';
+                autoplayBtn.title = 'Autoplay next video';
+            }
+        } else {
+            loopBtn.classList.remove('active');
+            loopBtn.querySelector('.icon-loop-off').style.display = 'block';
+            loopBtn.querySelector('.icon-loop-on').style.display = 'none';
+            loopBtn.title = 'Loop current video';
+        }
+        showControls();
+    });
+
+    // Autoplay Next Toggle Button
+    autoplayBtn.addEventListener('click', () => {
+        isAutoplayEnabled = !isAutoplayEnabled;
+        
+        if (isAutoplayEnabled) {
+            autoplayBtn.classList.add('active');
+            autoplayBtn.querySelector('.icon-autoplay-off').style.display = 'none';
+            autoplayBtn.querySelector('.icon-autoplay-on').style.display = 'block';
+            autoplayBtn.title = 'Autoplay enabled - Click to disable';
+            
+            // If loop is enabled, disable it (autoplay takes priority)
+            if (isLoopEnabled) {
+                isLoopEnabled = false;
+                videoPlayer.loop = false;
+                loopBtn.classList.remove('active');
+                loopBtn.querySelector('.icon-loop-off').style.display = 'block';
+                loopBtn.querySelector('.icon-loop-on').style.display = 'none';
+                loopBtn.title = 'Loop current video';
+            }
+        } else {
+            autoplayBtn.classList.remove('active');
+            autoplayBtn.querySelector('.icon-autoplay-off').style.display = 'block';
+            autoplayBtn.querySelector('.icon-autoplay-on').style.display = 'none';
+            autoplayBtn.title = 'Autoplay next video';
+        }
+        showControls();
+    });
+
+    // Play next video in the recent videos list
+    function playNextVideo() {
+        if (!currentVideo || recentVideos.length === 0) return;
+        
+        const currentIndex = recentVideos.findIndex(v => v.id === currentVideo.id);
+        
+        if (currentIndex === -1) return;
+        
+        // Get next video (loop back to first if at the end)
+        const nextIndex = (currentIndex + 1) % recentVideos.length;
+        const nextVideo = recentVideos[nextIndex];
+        
+        // Play the next video
+        playVideoFromIndexedDB(nextVideo.id);
+    }
+
     // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
         // Don't trigger if typing in input fields
@@ -824,8 +903,22 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(controlsTimeout);
         customControls.classList.add('show');
         videoContainer.classList.remove('hide-cursor');
-        document.querySelector('.icon-play').style.display = 'block';
-        document.querySelector('.icon-pause').style.display = 'none';
+        
+        // Handle based on loop/autoplay settings
+        if (isLoopEnabled) {
+            // Loop is already handled by videoPlayer.loop = true
+            // Just ensure play/pause icons are correct
+            return;
+        }
+        
+        if (isAutoplayEnabled) {
+            // Play next video in recent videos list
+            playNextVideo();
+        } else {
+            // Default behavior: show controls and reset play button
+            document.querySelector('.icon-play').style.display = 'block';
+            document.querySelector('.icon-pause').style.display = 'none';
+        }
     });
 
     // Event Listeners
