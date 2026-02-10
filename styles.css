@@ -473,3 +473,117 @@ video::-webkit-media-controls-volume-slider {
 .loading-video {
     animation: pulse 1.5s infinite;
 }
+
+/* Skip Controls Overlay */
+.video-controls-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 60px;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.video-container:hover .video-controls-overlay {
+    opacity: 1;
+}
+
+.skip-button {
+    pointer-events: auto;
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    color: white;
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+
+.skip-button:hover {
+    background-color: rgba(58, 134, 255, 0.9);
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(58, 134, 255, 0.5);
+}
+
+.skip-button:active {
+    transform: scale(0.95);
+}
+
+.skip-button svg {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 2px;
+}
+
+.skip-text {
+    font-size: 12px;
+    font-weight: 700;
+    position: absolute;
+    bottom: 14px;
+}
+
+/* Animation for skip feedback */
+@keyframes skipFeedback {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.skip-button.animate {
+    animation: skipFeedback 0.3s ease;
+}
+
+/* Responsive adjustments for skip buttons */
+@media (max-width: 768px) {
+    .video-controls-overlay {
+        padding: 0 20px;
+    }
+    
+    .skip-button {
+        width: 55px;
+        height: 55px;
+    }
+    
+    .skip-button svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .skip-text {
+        font-size: 10px;
+        bottom: 12px;
+    }
+}
+
+/* Show controls overlay when video is playing */
+.video-container.playing .video-controls-overlay {
+    opacity: 0;
+}
+
+.video-container.playing:hover .video-controls-overlay {
+    opacity: 1;
+}
