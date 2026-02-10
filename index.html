@@ -22,27 +22,70 @@
         </div>
 
         <div class="main-content">
-            <div class="video-container">
-                <video id="video-player" controls></video>
+            <div class="video-container" id="video-container">
+                <video id="video-player"></video>
                 <div id="no-video-message">Select a video to start watching</div>
 
-                <!-- Add these skip controls -->
-                <div class="video-controls-overlay">
-                    <button class="skip-button skip-backward" id="skip-backward" title="Go back 10 seconds">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
-                        </svg>
-                        <span class="skip-text">10</span>
-                    </button>
+                <!-- Custom Video Controls -->
+                <div class="custom-controls" id="custom-controls">
+                    <div class="progress-container" id="progress-container">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
 
-                    <button class="skip-button skip-forward" id="skip-forward" title="Go forward 10 seconds">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" />
-                        </svg>
-                        <span class="skip-text">10</span>
-                    </button>
+                    <div class="controls-bottom">
+                        <div class="controls-left">
+                            <button class="control-btn" id="play-pause">
+                                <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                                <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                </svg>
+                            </button>
+
+                            <button class="control-btn" id="skip-back" title="Back 10s">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
+                                </svg>
+                                <span class="skip-value">10</span>
+                            </button>
+
+                            <button class="control-btn" id="skip-forward" title="Forward 10s">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z" />
+                                </svg>
+                                <span class="skip-value">10</span>
+                            </button>
+
+                            <div class="time-display">
+                                <span id="current-time">0:00</span> / <span id="duration">0:00</span>
+                            </div>
+                        </div>
+
+                        <div class="controls-right">
+                            <button class="control-btn" id="volume-btn">
+                                <svg class="icon-volume" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+                                </svg>
+                            </button>
+                            <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="100">
+
+                            <button class="control-btn" id="fullscreen-btn">
+                                <svg class="icon-fullscreen" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                                </svg>
+                                <svg class="icon-exit-fullscreen" viewBox="0 0 24 24" fill="currentColor"
+                                    style="display:none;">
+                                    <path
+                                        d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
