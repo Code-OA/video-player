@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load a video from IndexedDB and play it
-    async function playVideoFromIndexedDB(videoId) {
+    async function playVideoFromIndexedDB(videoId, isAutoplayTriggered = false) {
         try {
             // Show loading state
             noVideoMessage.textContent = "Loading video...";
@@ -310,14 +310,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (videoIndex !== -1) {
                 currentVideo = recentVideos[videoIndex];
 
-                // Move to the top of recents list if not already there
-                if (videoIndex > 0) {
-                    recentVideos.splice(videoIndex, 1);
-                    recentVideos.unshift(currentVideo);
-                }
+                // Only move to top and update timestamp if NOT triggered by autoplay
+                if (!isAutoplayTriggered) {
+                    // Move to the top of recents list if not already there
+                    if (videoIndex > 0) {
+                        recentVideos.splice(videoIndex, 1);
+                        recentVideos.unshift(currentVideo);
+                    }
 
-                // Update last played timestamp
-                currentVideo.lastPlayed = new Date().toISOString();
+                    // Update last played timestamp
+                    currentVideo.lastPlayed = new Date().toISOString();
+                    saveData();
+                    renderRecentVideos();
+                }
 
                 // Setup video playback
                 const videoObjectURL = URL.createObjectURL(videoFile);
@@ -340,8 +345,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     videoPlayer.play().catch(err => console.log('Auto-play prevented:', err));
-                    saveData();
-                    renderRecentVideos();
                 };
 
                 videoPlayer.onerror = function () {
@@ -840,8 +843,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextIndex = (currentIndex + 1) % recentVideos.length;
         const nextVideo = recentVideos[nextIndex];
         
-        // Play the next video
-        playVideoFromIndexedDB(nextVideo.id);
+        // Play the next video with autoplay flag set to true
+        playVideoFromIndexedDB(nextVideo.id, true);
     }
 
     // Keyboard Shortcuts
