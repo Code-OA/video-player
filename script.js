@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const LOCAL_STORAGE_KEY = 'video-player-app-data';
     const INITIAL_VOLUME = 0.1; // Consistent initial volume
     let db; // IndexedDB reference
-    let lastSaveTime = 0; // Track last save to prevent multiple renders
 
     // Initialize the IndexedDB
     initIndexedDB();
@@ -545,7 +544,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'video-checkbox';
-            checkbox.dataset.videoId = video.id;
             checkbox.addEventListener('click', (e) => {
                 e.stopPropagation();
                 // Checkbox manages its own state
@@ -567,10 +565,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Click event to play this video
             videoItem.addEventListener('click', (e) => {
-                if (e.target.classList.contains('video-checkbox')) {
-                    return;
+                if (e.target !== checkbox) {
+                    playVideoFromIndexedDB(video.id);
                 }
-                playVideoFromIndexedDB(video.id);
             });
 
             recentVideosList.appendChild(videoItem);
@@ -927,29 +924,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update playback position periodically
     videoPlayer.addEventListener('timeupdate', () => {
         if (currentVideo && videoPlayer.currentTime > 0) {
-            const currentSecond = Math.floor(videoPlayer.currentTime);
-            
-            // Only update once per 5 seconds, not 60 times per second
-            if (currentSecond % 5 === 0 && currentSecond !== lastSaveTime) {
-                lastSaveTime = currentSecond;
+            // Update every 5 seconds
+            if (Math.floor(videoPlayer.currentTime) % 5 === 0) {
                 updatePlaybackPosition();
-                
-                // Update only the progress bar, don't re-render entire list
-                const videoItem = document.querySelector(`[data-video-id="${currentVideo.id}"]`);
-                if (videoItem) {
-                    const progressBar = videoItem.querySelector('.video-progress-bar');
-                    const lastPositionSpan = videoItem.querySelector('.video-last-position');
-                    const position = videoPlaybackPositions[currentVideo.id] || 0;
-                    const progressPercentage = currentVideo.duration ? 
-                        Math.floor((position / currentVideo.duration) * 100) : 0;
-                    
-                    if (progressBar) {
-                        progressBar.style.width = `${progressPercentage}%`;
-                    }
-                    if (lastPositionSpan) {
-                        lastPositionSpan.textContent = `${progressPercentage}% watched`;
-                    }
-                }
+                renderRecentVideos();
             }
         }
     });
@@ -963,39 +941,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (checkedBoxes.length === 0) return;
 
-        const videosToDelete = [];
+        const deletePromises = [];
 
         checkedBoxes.forEach(checkbox => {
-            const videoId = checkbox.dataset.videoId;
+            const videoItem = checkbox.closest('.recent-video-item');
+            const videoId = videoItem.dataset.videoId;
             const index = findVideoInRecents(videoId);
 
             if (index !== -1) {
-                videosToDelete.push({videoId, index});
+                recentVideos.splice(index, 1);
+                delete videoPlaybackPositions[videoId];
+                deletePromises.push(deleteVideoFromIndexedDB(videoId));
+
+                // If this is the current video, reset the player
+                if (currentVideo && currentVideo.id === videoId) {
+                    cleanupPreviousVideo();
+                    currentVideo = null;
+                    videoPlayer.src = '';
+                    videoPlayer.style.display = 'none';
+                    noVideoMessage.style.display = 'flex';
+                    noVideoMessage.textContent = 'Select a video to start watching';
+                    noVideoMessage.classList.remove('loading-video');
+                }
             }
         });
 
-        // Sort by index descending to avoid array shifting issues
-        videosToDelete.sort((a, b) => b.index - a.index);
-
-        const deletePromises = [];
-        videosToDelete.forEach(({videoId, index}) => {
-            recentVideos.splice(index, 1);
-            delete videoPlaybackPositions[videoId];
-            deletePromises.push(deleteVideoFromIndexedDB(videoId));
-
-            // If this is the current video, reset the player
-            if (currentVideo && currentVideo.id === videoId) {
-                cleanupPreviousVideo();
-                currentVideo = null;
-                videoPlayer.src = '';
-                videoPlayer.style.display = 'none';
-                noVideoMessage.style.display = 'flex';
-                noVideoMessage.textContent = 'Select a video to start watching';
-                noVideoMessage.classList.remove('loading-video');
-            }
-        });
-
-        await Promise.allSettled(deletePromises);
+        Promise.allSettled(deletePromises)
+            .then(results => {
+                results.forEach(result => {
+                    if (result.status === 'rejected') {
+                        console.error('Error deleting video from IndexedDB:', result.reason);
+                    }
+                });
+            });
 
         saveData();
         renderRecentVideos();
